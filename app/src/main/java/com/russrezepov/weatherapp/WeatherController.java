@@ -1,12 +1,14 @@
 package com.russrezepov.weatherapp;
 
 import android.Manifest;
+import android.app.DownloadManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.preference.PreferenceActivity;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -14,15 +16,25 @@ import android.util.Log;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import com.loopj.android.http.AsyncHttpClient;
+import com.loopj.android.http.JsonHttpResponseHandler;
+import com.loopj.android.http.RequestParams;
+
+import org.json.JSONObject;
+
+import cz.msebera.android.httpclient.Header;
 
 
+//api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid=201b68fb374f8735ee7faf2c8bc4c8c5
 public class WeatherController extends AppCompatActivity {
 
     // Constants:
     final int REQUEST_CODE = 123;
     final String WEATHER_URL = "http://api.openweathermap.org/data/2.5/weather";
     // App ID to use OpenWeather data
-    final String APP_ID = "e72____PLEASE_REPLACE_ME_____13";
+    final String APP_ID = "201b68fb374f8735ee7faf2c8bc4c8c5";
     // Time between location updates (5000 milliseconds or 5 seconds)
     final long MIN_TIME = 5000;
     // Distance between location updates (1000m or 1km)
@@ -82,6 +94,12 @@ public class WeatherController extends AppCompatActivity {
 
                 Log.d("WeatherApp", "GPS Longitude is:" + longitude);
                 Log.d("WeatherApp", "GPS Latitude is:" + latitude);
+
+                RequestParams params = new RequestParams();
+                params.put("lat", latitude );
+                params.put("lon", longitude);
+                params.put("appid", APP_ID);
+                gpsNetworkConnection(params);
             }
 
             @Override
@@ -134,10 +152,34 @@ public class WeatherController extends AppCompatActivity {
 
 
     // TODO: Add letsDoSomeNetworking(RequestParams params) here:
+    private void gpsNetworkConnection(RequestParams params){
+        //app remains responsive while waiting for data from OpenWeatherMap
+        AsyncHttpClient client = new AsyncHttpClient();
+        client.get(WEATHER_URL, params, new JsonHttpResponseHandler(){
+           @Override
+           public void onSuccess(int StatusCode, Header[] headers, JSONObject response){
+               Log.d("WeatherApp", "Success JSON: " + response.toString());
+               WeatherDataModel weatherData = WeatherDataModel.fromJson(response);
+               upDateUI(weatherData);
+           }
 
+           public void onFailure(int statusCode, Header[] headers, Throwable e, JSONObject response) {
+               Log.e("WeatherApp", "Fail " + e.toString());
+               Log.e("WeatherApp", "StatusCode " + statusCode);
+               Toast.makeText(WeatherController.this, "Requesr Failed", Toast.LENGTH_SHORT).show();
+           }
+        });
+    }
 
 
     // TODO: Add updateUI() here:
+    private void upDateUI(WeatherDataModel weather) {
+        mTemperatureLabel.setText(weather.getmTemperature());
+        mCityLabel.setText(weather.getmCity());
+
+        int resourceID = getResources().getIdentifier(weather.getmIconName(), "drawable", getPackageName());
+        mWeatherImage.setImageResource(resourceID);
+    }
 
 
 
