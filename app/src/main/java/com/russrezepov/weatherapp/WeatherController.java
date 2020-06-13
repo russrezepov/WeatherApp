@@ -3,6 +3,7 @@ package com.russrezepov.weatherapp;
 import android.Manifest;
 import android.app.DownloadManager;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
@@ -13,6 +14,7 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -66,6 +68,13 @@ public class WeatherController extends AppCompatActivity {
 
 
         // TODO: Add an OnClickListener to the changeCityButton here:
+        changeCityButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(WeatherController.this, ChangeCityController.class );
+                startActivity(intent);
+            }
+        });
 
     }
 
@@ -75,12 +84,43 @@ public class WeatherController extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         Log.d("WeatherApp", "onResume() Called");
-        Log.d("WeatherApp", "Getting weather for current location");
-        getWeatherForCurrentLocation();
+
+        Intent newCityIntent = getIntent();
+        String newCity = newCityIntent.getStringExtra("City");
+
+        if(newCity != null) {
+            getWeatherForNewCity(newCity);
+        } else {
+            Log.d("WeatherApp", "Getting weather for current location");
+            getWeatherForCurrentLocation();
+        }
+
     }
 
 
     // TODO: Add getWeatherForNewCity(String city) here:
+    private void getWeatherForNewCity(String city) {
+        RequestParams params = new RequestParams();
+        params.put("q", city);
+        params.put("appid", APP_ID);
+        gpsNetworkConnection(params);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d("WeatherApp", "onRequestPermissionResult(): Permission Granted");
+                getWeatherForCurrentLocation();
+            } else {
+                Log.d("WeatherApp", "Location Permisison Denied");
+            }
+        }
+    }
+
+    // TODO: Add getWeatherForCurrentLocation() here:
     private void getWeatherForCurrentLocation() {
         //gets hold of a location Manager and assigns that location object to locationManager
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
@@ -133,22 +173,6 @@ public class WeatherController extends AppCompatActivity {
         locationManager.requestLocationUpdates(LOCATION_PROVIDER, MIN_TIME, MIN_DISTANCE, locationListener);
     }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
-        if (requestCode == REQUEST_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Log.d("WeatherApp", "onRequestPermissionResult(): Permission Granted");
-                getWeatherForCurrentLocation();
-            } else {
-                Log.d("WeatherApp", "Location Permisison Denied");
-            }
-        }
-    }
-
-    // TODO: Add getWeatherForCurrentLocation() here:
-
 
 
     // TODO: Add letsDoSomeNetworking(RequestParams params) here:
@@ -166,7 +190,7 @@ public class WeatherController extends AppCompatActivity {
            public void onFailure(int statusCode, Header[] headers, Throwable e, JSONObject response) {
                Log.e("WeatherApp", "Fail " + e.toString());
                Log.e("WeatherApp", "StatusCode " + statusCode);
-               Toast.makeText(WeatherController.this, "Requesr Failed", Toast.LENGTH_SHORT).show();
+               Toast.makeText(WeatherController.this, "Requesttt Failed", Toast.LENGTH_SHORT).show();
            }
         });
     }
@@ -186,5 +210,12 @@ public class WeatherController extends AppCompatActivity {
     // TODO: Add onPause() here:
 
 
+    @Override
+    protected void onPause() {
+        super.onPause();
 
+        if(locationManager != null) {
+            locationManager.removeUpdates(locationListener);
+        }
+    }
 }
